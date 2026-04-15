@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Daily Client Tracker</title>
+    <style>
+      :root {
+        --bg: #090909;
+        --panel: #151515;
+        --panel-soft: #1d1d1d;
+        --text: #f3f3f3;
+        --muted: #a8a8a8;
+        --accent: #6a5cff;
+        --success: #22c55e;
+        --warning: #f59e0b;
+        --danger: #ef4444;
+        --task-off: #373737;
+        --task-on: #16a34a;
+        --glow: 0 0 0 1px rgba(106, 92, 255, 0.45), 0 0 30px rgba(106, 92, 255, 0.35);
+        --radius: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        min-height: 100vh;
+        background: radial-gradient(circle at 20% 0%, #1f1f2b 0%, #090909 45%);
+        color: var(--text);
+      }
+
+      .app {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 28px 20px 40px;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        padding: 14px 16px;
+        margin-bottom: 20px;
+        border-radius: 14px;
+        background: rgba(12, 12, 12, 0.84);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .title {
+        margin: 0;
+        font-size: clamp(1.2rem, 2vw, 1.8rem);
+        font-weight: 750;
+        letter-spacing: 0.3px;
+      }
+
+      .subtitle {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .summary-pill {
+        background: var(--panel-soft);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 10px 14px;
+        border-radius: 999px;
+        font-size: 0.92rem;
+        color: #d2d2d2;
+        white-space: nowrap;
+      }
+
+      .clients-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 14px;
+      }
+
+      .client-card {
+        background: linear-gradient(160deg, rgba(28, 28, 28, 0.95), rgba(16, 16, 16, 0.96));
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: var(--radius);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+          box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+          border-color 0.25s ease,
+          background 0.25s ease;
+      }
+
+      .client-card:hover {
+        transform: translateY(-4px) scale(1.01);
+        border-color: rgba(106, 92, 255, 0.4);
+      }
+
+      .client-card.active {
+        box-shadow: var(--glow);
+        border-color: rgba(106, 92, 255, 0.52);
+      }
+
+      .client-card.completed {
+        background: linear-gradient(155deg, rgba(6, 42, 24, 0.9), rgba(12, 26, 14, 0.96));
+        border-color: rgba(34, 197, 94, 0.6);
+      }
+
+      .card-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: flex-start;
+      }
+
+      .client-name {
+        margin: 0;
+        font-size: 1.02rem;
+        letter-spacing: 0.4px;
+      }
+
+      .priority {
+        margin-top: 6px;
+        display: inline-flex;
+        font-size: 0.74rem;
+        font-weight: 700;
+        color: #ffc971;
+        background: rgba(245, 158, 11, 0.15);
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        border-radius: 999px;
+        padding: 3px 8px;
+      }
+
+      .state {
+        font-size: 1.2rem;
+        min-width: 24px;
+        text-align: right;
+      }
+
+      .progress {
+        margin: 0;
+        font-size: 0.9rem;
+        color: #d9d9d9;
+      }
+
+      .task-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .task-btn {
+        border: 1px solid transparent;
+        background: var(--task-off);
+        color: #ececec;
+        border-radius: 999px;
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 0.82rem;
+        letter-spacing: 0.15px;
+        transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      }
+
+      .task-btn:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.24);
+      }
+
+      .task-btn.done {
+        background: var(--task-on);
+        box-shadow: 0 8px 18px rgba(22, 163, 74, 0.35);
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .timer-btn {
+        border: none;
+        border-radius: 10px;
+        padding: 9px 12px;
+        font-size: 0.86rem;
+        color: #fff;
+        cursor: pointer;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+      }
+
+      .timer-btn:hover {
+        transform: translateY(-1px);
+      }
+
+      .timer-btn.start {
+        background: var(--accent);
+      }
+
+      .timer-btn.stop {
+        background: #3b3b3b;
+      }
+
+      .timer-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .timer-info {
+        margin: 0;
+        font-size: 0.84rem;
+        color: #d0d0d0;
+      }
+
+      .timer-info.warn {
+        color: #ffd18d;
+      }
+
+      .timer-info.done {
+        color: #86efac;
+      }
+
+      .timer-info.live {
+        color: #aeb7ff;
+      }
+
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.72);
+        display: grid;
+        place-items: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+
+      .overlay.show {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .modal {
+        width: min(420px, 90vw);
+        background: #141414;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 18px;
+        padding: 26px 22px;
+        text-align: center;
+        box-shadow: 0 24px 45px rgba(0, 0, 0, 0.55);
+      }
+
+      .modal h2 {
+        margin: 0 0 10px;
+        font-size: 1.55rem;
+      }
+
+      .modal p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      @media (max-width: 720px) {
+        .topbar {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <section class="topbar">
+        <div>
+          <h1 class="title">Daily Client Work Tracker</h1>
+          <p class="subtitle">Press <strong>Enter</strong> to move to the next client.</p>
+        </div>
+        <div id="globalSummary" class="summary-pill">0 / 7 clients complete</div>
+      </section>
+
+      <section id="clientsGrid" class="clients-grid"></section>
+    </main>
+
+    <div id="celebration" class="overlay" role="dialog" aria-modal="true" aria-label="Completion message">
+      <div class="modal">
+        <h2>🎉 Have a Great Day!</h2>
+        <p>All clients are complete. Awesome consistency.</p>
+      </div>
+    </div>
+
+    <script>
+      const STORAGE_KEY = "daily-client-work-tracker-v1";
+      const COUNTDOWN_MINUTES = 40;
+      const clientsSeed = [
+        { name: "DIGITAL JUGGLER", tasks: ["Reel 1", "Reel 2", "Reel 3", "Reel 4", "Reel 5"] },
+        { name: "KALRAJ THAKUR", tasks: ["Video 1", "Video 2", "Video 3", "Video 4"] },
+        { name: "SHIKHAR", priority: "High Priority", tasks: ["Daily Post"] },
+        { name: "FLOWGREEN", tasks: ["1 Content Task (Post / Video)"] },
+        { name: "GROWGREEN", tasks: ["Daily Post"] },
+        { name: "SAM RENISSA", tasks: ["YouTube Upload"] },
+        { name: "VARCHAS", tasks: ["Post (Alternate Day)"] },
+      ];
+
+      const grid = document.getElementById("clientsGrid");
+      const summary = document.getElementById("globalSummary");
+      const celebration = document.getElementById("celebration");
+      let intervalRef = null;
+
+      function initState() {
+        const fallback = {
+          activeClient: 0,
+          celebrationShown: false,
+          clients: clientsSeed.map((client) => ({
+            ...client,
+            tasks: client.tasks.map((label) => ({ label, done: false })),
+            timer: {
+              running: false,
+              startedAt: null,
+              remainingSeconds: COUNTDOWN_MINUTES * 60,
+              completionMinutes: null,
+              justFinished: false,
+            },
+          })),
+        };
+
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          if (!saved || !Array.isArray(saved.clients)) return fallback;
+
+          return {
+            ...fallback,
+            ...saved,
+            clients: fallback.clients.map((c, i) => {
+              const savedClient = saved.clients[i] || {};
+              return {
+                ...c,
+                tasks: c.tasks.map((task, idx) => ({
+                  ...task,
+                  done: Boolean(savedClient.tasks?.[idx]?.done),
+                })),
+                timer: {
+                  ...c.timer,
+                  ...(savedClient.timer || {}),
+                  running: false,
+                  startedAt: null,
+                },
+              };
+            }),
+          };
+        } catch {
+          return fallback;
+        }
+      }
+
+      let state = initState();
+
+      function persistState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+
+      function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60)
+          .toString()
+          .padStart(2, "0");
+        const secs = Math.floor(seconds % 60)
+          .toString()
+          .padStart(2, "0");
+        return `${mins}:${secs}`;
+      }
+
+      function isClientDone(client) {
+        return client.tasks.every((task) => task.done);
+      }
+
+      function allClientsDone() {
+        return state.clients.every(isClientDone);
+      }
+
+      function moveToNextClient(fromIndex) {
+        const nextIndex = (fromIndex + 1) % state.clients.length;
+        state.activeClient = nextIndex;
+      }
+
+      function showCelebrationIfNeeded() {
+        if (allClientsDone() && !state.celebrationShown) {
+          state.celebrationShown = true;
+          celebration.classList.add("show");
+          setTimeout(() => {
+            celebration.classList.remove("show");
+          }, 2400);
+        }
+      }
+
+      function updateSummary() {
+        const doneCount = state.clients.filter(isClientDone).length;
+        summary.textContent = `${doneCount} / ${state.clients.length} clients complete`;
+      }
+
+      function stopAnyRunningTimer(exceptIndex = null) {
+        state.clients.forEach((client, idx) => {
+          if (idx === exceptIndex) return;
+          if (client.timer.running) {
+            client.timer.running = false;
+          }
+        });
+      }
+
+      function startTimer(index) {
+        const client = state.clients[index];
+        stopAnyRunningTimer(index);
+        client.timer.running = true;
+        client.timer.startedAt = Date.now();
+        client.timer.completionMinutes = null;
+        client.timer.justFinished = false;
+      }
+
+      function stopTimer(index) {
+        const client = state.clients[index];
+        if (!client.timer.running) return;
+
+        const elapsedMs = Date.now() - client.timer.startedAt;
+        client.timer.running = false;
+        client.timer.startedAt = null;
+        client.timer.completionMinutes = Math.max(1, Math.round(elapsedMs / 60000));
+        client.timer.justFinished = true;
+      }
+
+      function updateTimers() {
+        let rerender = false;
+
+        state.clients.forEach((client) => {
+          if (!client.timer.running || !client.timer.startedAt) return;
+          const elapsed = Math.floor((Date.now() - client.timer.startedAt) / 1000);
+          const remaining = COUNTDOWN_MINUTES * 60 - elapsed;
+          client.timer.remainingSeconds = Math.max(0, remaining);
+
+          if (remaining <= 0) {
+            client.timer.running = false;
+            client.timer.startedAt = null;
+            client.timer.completionMinutes = COUNTDOWN_MINUTES;
+            client.timer.justFinished = true;
+          }
+
+          rerender = true;
+        });
+
+        if (rerender) {
+          render();
+          persistState();
+        }
+      }
+
+      function toggleTask(clientIdx, taskIdx) {
+        const task = state.clients[clientIdx].tasks[taskIdx];
+        task.done = !task.done;
+
+        if (isClientDone(state.clients[clientIdx])) {
+          moveToNextClient(clientIdx);
+        }
+
+        showCelebrationIfNeeded();
+        persistState();
+        render();
+      }
+
+      function nextClient() {
+        moveToNextClient(state.activeClient);
+        persistState();
+        render();
+      }
+
+      function render() {
+        grid.innerHTML = "";
+
+        state.clients.forEach((client, idx) => {
+          const doneCount = client.tasks.filter((t) => t.done).length;
+          const allDone = doneCount === client.tasks.length;
+          const card = document.createElement("article");
+          card.className = ["client-card", idx === state.activeClient ? "active" : "", allDone ? "completed" : ""]
+            .filter(Boolean)
+            .join(" ");
+
+          const timeLeft = client.timer.running
+            ? formatTime(Math.max(0, client.timer.remainingSeconds))
+            : formatTime(client.timer.remainingSeconds);
+
+          let timerText = `⏱ ${timeLeft} remaining`;
+          let timerClass = "";
+
+          if (client.timer.running) {
+            timerText = `⏱ Running: ${timeLeft}`;
+            timerClass = "live";
+          } else if (client.timer.justFinished && client.timer.completionMinutes) {
+            timerText = `Completed in ${client.timer.completionMinutes} minutes`;
+            timerClass = "done";
+          } else if (client.timer.remainingSeconds === 0) {
+            timerText = "Timer reached 40:00";
+            timerClass = "warn";
+          }
+
+          card.innerHTML = `
+            <header class="card-head">
+              <div>
+                <h2 class="client-name">${client.name}</h2>
+                ${client.priority ? `<span class="priority">${client.priority}</span>` : ""}
+              </div>
+              <div class="state" aria-label="completion state">${allDone ? "✔" : ""}</div>
+            </header>
+
+            <p class="progress">Progress: ${doneCount}/${client.tasks.length} completed</p>
+
+            <div class="task-list">
+              ${client.tasks
+                .map(
+                  (task, taskIndex) => `
+                  <button
+                    class="task-btn ${task.done ? "done" : ""}"
+                    data-client="${idx}"
+                    data-task="${taskIndex}"
+                    aria-pressed="${task.done}"
+                  >
+                    ${task.label}
+                  </button>
+                `
+                )
+                .join("")}
+            </div>
+
+            <div class="controls">
+              <button class="timer-btn start" data-start="${idx}" ${client.timer.running ? "disabled" : ""}>▶ Start</button>
+              <button class="timer-btn stop" data-stop="${idx}" ${client.timer.running ? "" : "disabled"}>⏹ Stop</button>
+            </div>
+
+            <p class="timer-info ${timerClass}">${timerText}</p>
+          `;
+
+          grid.appendChild(card);
+        });
+
+        updateSummary();
+      }
+
+      grid.addEventListener("click", (event) => {
+        const taskButton = event.target.closest("[data-task]");
+        if (taskButton) {
+          const clientIdx = Number(taskButton.dataset.client);
+          const taskIdx = Number(taskButton.dataset.task);
+          toggleTask(clientIdx, taskIdx);
+          return;
+        }
+
+        const startBtn = event.target.closest("[data-start]");
+        if (startBtn) {
+          const index = Number(startBtn.dataset.start);
+          startTimer(index);
+          persistState();
+          render();
+          return;
+        }
+
+        const stopBtn = event.target.closest("[data-stop]");
+        if (stopBtn) {
+          const index = Number(stopBtn.dataset.stop);
+          stopTimer(index);
+          persistState();
+          render();
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          nextClient();
+        }
+      });
+
+      celebration.addEventListener("click", () => {
+        celebration.classList.remove("show");
+      });
+
+      intervalRef = setInterval(updateTimers, 1000);
+      render();
+      showCelebrationIfNeeded();
+      persistState();
+    </script>
+  </body>
+</html>
